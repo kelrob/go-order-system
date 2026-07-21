@@ -1,0 +1,24 @@
+package config
+
+import "os"
+
+type Config struct {
+	DatabaseURL string
+	KafkaBroker string
+	Port        string
+}
+
+func Load() *Config {
+	return &Config{
+		DatabaseURL: getEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5433/inventorydb"),
+		KafkaBroker: getEnv("KAFKA_BROKER", "localhost:9092"),
+		Port:        getEnv("PORT", "8081"),
+	}
+}
+
+func getEnv(key, defaultValue string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return defaultValue
+}
