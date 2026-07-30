@@ -85,6 +85,10 @@ func (l *Logger) Debug(traceId string, eventName string, message string) {
 		Msg(message)
 }
 
+func (l *Logger) Fatal(message string, err error) {
+	l.log.Fatal().Err(err).Msg(message)
+}
+
 func (l *Logger) Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()

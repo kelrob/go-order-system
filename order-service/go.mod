@@ -1,6 +1,6 @@
 module github.com/kelrob/order-service
 
-go 1.26.4
+go 1.26.5
 
 require (
 	github.com/jackc/pgx/v5 v5.10.0
@@ -9,6 +9,7 @@ require (
 )
 
 require (
+	github.com/kelrob/shared/helpers v0.0.0-00010101000000-000000000000 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/rs/zerolog v1.35.1 // indirect
@@ -30,3 +31,5 @@ require (
 replace github.com/kelrob/shared/logger => ../shared/logger
 
 replace github.com/kelrob/shared/events => ../shared/events
+
+replace github.com/kelrob/shared/helpers => ../shared/helpers
