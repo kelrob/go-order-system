@@ -13,7 +13,7 @@ require (
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
-	github.com/kelrob/shared/helpers v0.0.0-00010101000000-000000000000 // indirect
+	github.com/kelrob/shared/env v0.0.0-00010101000000-000000000000
 	github.com/klauspost/compress v1.18.6 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
@@ -29,4 +29,4 @@ replace github.com/kelrob/shared/logger => ../shared/logger
 
 replace github.com/kelrob/shared/events => ../shared/events
 
-replace github.com/kelrob/shared/helpers => ../shared/helpers
+replace github.com/kelrob/shared/env => ../shared/env

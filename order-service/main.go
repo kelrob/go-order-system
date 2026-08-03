@@ -15,11 +15,11 @@ import (
 	"github.com/kelrob/order-service/domain"
 	"github.com/kelrob/order-service/handlers"
 	"github.com/kelrob/order-service/kafka"
-	"github.com/kelrob/order-service/middlleware"
 	"github.com/kelrob/order-service/service"
 	"github.com/kelrob/order-service/storage"
 	"github.com/kelrob/shared/events"
 	"github.com/kelrob/shared/logger"
+	"github.com/kelrob/shared/middleware"
 )
 
 var (
@@ -133,7 +133,7 @@ func main() {
 
 	go relay.Start(ctx)
 
-	limiter := middlleware.NewRateLimiter(5, 2)
+	limiter := middleware.NewRateLimiter(5, 2)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("POST /orders", orderHandler.CreateOrder)

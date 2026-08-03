@@ -1,6 +1,6 @@
 package config
 
-import "github.com/kelrob/shared/helpers"
+import "github.com/kelrob/shared/env"
 
 type Config struct {
 	DatabaseURL string
@@ -10,8 +10,8 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
-		DatabaseURL: helpers.GetEnv("DATABASE_URL", "postgres://postgres:postgres@localhost:5435/authdb"),
-		KafkaBroker: helpers.GetEnv("KAFKA_BROKER", "localhost:9092"),
-		Port:        helpers.GetEnv("PORT", "8085"),
+		DatabaseURL: env.Get("DATABASE_URL", "postgres://postgres:postgres@localhost:5435/authdb"),
+		KafkaBroker: env.Get("KAFKA_BROKER", "localhost:9092"),
+		Port:        env.Get("PORT", "8085"),
 	}
 }

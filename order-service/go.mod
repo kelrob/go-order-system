@@ -4,16 +4,18 @@ go 1.26.5
 
 require (
 	github.com/jackc/pgx/v5 v5.10.0
+	github.com/kelrob/shared/env v0.0.0-00010101000000-000000000000
 	github.com/kelrob/shared/events v0.0.0-00010101000000-000000000000
+	github.com/kelrob/shared/middleware v0.0.0-00010101000000-000000000000
 	github.com/twmb/franz-go v1.21.5
 )
 
 require (
-	github.com/kelrob/shared/helpers v0.0.0-00010101000000-000000000000 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
 	github.com/rs/zerolog v1.35.1 // indirect
-	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/crypto v0.54.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 )
 
 require (
@@ -24,12 +26,14 @@ require (
 	github.com/klauspost/compress v1.18.6 // indirect
 	github.com/pierrec/lz4/v4 v4.1.26 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.13.1 // indirect
-	golang.org/x/sync v0.17.0 // indirect
-	golang.org/x/text v0.29.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/text v0.40.0 // indirect
 )
 
 replace github.com/kelrob/shared/logger => ../shared/logger
 
 replace github.com/kelrob/shared/events => ../shared/events
 
-replace github.com/kelrob/shared/helpers => ../shared/helpers
+replace github.com/kelrob/shared/env => ../shared/env
+
+replace github.com/kelrob/shared/middleware => ../shared/middleware

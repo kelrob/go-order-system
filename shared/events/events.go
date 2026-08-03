@@ -1,9 +1,17 @@
 package events
 
 const (
-	OrderCreated        = "order.created"
+	// ORDER
+	OrderCreated = "order.created"
+
+	// INVENTORY
 	InventoryReserved   = "inventory.reserved"
 	InventoryUnreserved = "inventory.unreserved"
-	PaymentSucceeded    = "payment.succeeded"
-	PaymentFailed       = "payment.failed"
+
+	// PAYMENT
+	PaymentSucceeded = "payment.succeeded"
+	PaymentFailed    = "payment.failed"
+
+	// USER
+	UserRegistered = "user.registered"
 )
