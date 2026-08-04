@@ -110,3 +110,69 @@ func (a *AuthRepository) GetUserByEmail(ctx context.Context, email string) (User
 
 	return user, nil
 }
+
+func (a *AuthRepository) CreateRefreshToken(ctx context.Context, token RefreshToken) error {
+	_, err := a.db.Exec(ctx,
+		`INSERT INTO refresh_tokens (id, user_id, token, expires_at, created_at, revoked)
+		VALUES ($1, $2, $3, $4, $5, $6)`,
+		token.Id,
+		token.UserId,
+		token.Token,
+		token.ExpiresAt,
+		token.CreatedAt,
+		token.Revoked,
+	)
+	if err != nil {
+		return fmt.Errorf("failed to insert refresh token: %w", err)
+	}
+
+	return nil
+}
+
+func (a *AuthRepository) GetRefreshToken(ctx context.Context, refreshToken string) (RefreshToken, error) {
+	var token RefreshToken
+
+	err := a.db.QueryRow(ctx,
+		`SELECT id, user_id, token, expires_at, created_at, revoked
+		FROM refresh_tokens WHERE token = $1`,
+		strings.TrimSpace(refreshToken),
+	).Scan(
+		&token.Id,
+		&token.UserId,
+		&token.Token,
+		&token.ExpiresAt,
+		&token.CreatedAt,
+		&token.Revoked,
+	)
+
+	if err != nil {
+		return RefreshToken{}, err
+	}
+
+	return token, nil
+}
+
+func (a *AuthRepository) GetUserByID(ctx context.Context, id string) (User, error) {
+	var user User
+
+	err := a.db.QueryRow(ctx,
+		`SELECT id, email, first_name, last_name, role, is_locked, created_at, updated_at
+		FROM users WHERE id = $1`,
+		strings.TrimSpace(id),
+	).Scan(
+		&user.Id,
+		&user.Email,
+		&user.FirstName,
+		&user.LastName,
+		&user.Role,
+		&user.IsLocked,
+		&user.CreatedAt,
+		&user.UpdatedAt,
+	)
+
+	if err != nil {
+		return User{}, err
+	}
+
+	return user, nil
+}

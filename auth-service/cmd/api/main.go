@@ -37,7 +37,7 @@ func main() {
 	appLog.Log("Connected to database successfully", nil)
 
 	authRepo := auth.NewAuthRepository(db)
-	authService := auth.NewAuthService(authRepo, "SAMPLE1$", 15*time.Minute)
+	authService := auth.NewAuthService(authRepo, "SAMPLE1$", 15*time.Minute, 7*24*time.Hour)
 	authHandler := auth.NewAuthHandler(authService)
 
 	limiter := middleware.NewRateLimiter(5, 2)

@@ -2,6 +2,8 @@ package auth
 
 import (
 	"context"
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"time"
@@ -14,19 +16,24 @@ import (
 type UserRepository interface {
 	CreateUser(ctx context.Context, user User) error
 	GetUserByEmail(ctx context.Context, email string) (User, error)
+	GetUserByID(ctx context.Context, id string) (User, error)
+	CreateRefreshToken(ctx context.Context, token RefreshToken) error
+	GetRefreshToken(ctx context.Context, token string) (RefreshToken, error)
 }
 
 type AuthService struct {
-	repo           UserRepository
-	jwtSecret      []byte
-	accessTokenTTL time.Duration
+	repo            UserRepository
+	jwtSecret       []byte
+	accessTokenTTL  time.Duration
+	refreshTokenTTL time.Duration
 }
 
-func NewAuthService(repo UserRepository, jwtSecret string, accessTokenTTL time.Duration) *AuthService {
+func NewAuthService(repo UserRepository, jwtSecret string, accessTokenTTL, refreshTokenTTL time.Duration) *AuthService {
 	return &AuthService{
-		repo:           repo,
-		jwtSecret:      []byte(jwtSecret),
-		accessTokenTTL: accessTokenTTL,
+		repo:            repo,
+		jwtSecret:       []byte(jwtSecret),
+		accessTokenTTL:  accessTokenTTL,
+		refreshTokenTTL: refreshTokenTTL,
 	}
 }
 
@@ -75,21 +82,69 @@ func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (Us
 	return user, nil
 }
 
-func (s *AuthService) Login(ctx context.Context, input LoginInput) (string, error) {
+func (s *AuthService) Login(ctx context.Context, input LoginInput) (LoginResponse, error) {
 	user, err := s.repo.GetUserByEmail(ctx, input.Email)
 	if err != nil {
-		return "", ErrInvalidCredentials
+		return LoginResponse{}, ErrInvalidCredentials
 	}
 
 	if !password.Verify(input.Password, user.HashedPassword) {
-		return "", ErrInvalidCredentials
+		return LoginResponse{}, ErrInvalidCredentials
 	}
 
-	token, err := s.generateAccessToken(&user)
+	accessToken, err := s.generateAccessToken(&user)
 	if err != nil {
-		return "", fmt.Errorf("failed to generate token: %w", err)
+		return LoginResponse{}, fmt.Errorf("failed to generate access token: %w", err)
 	}
-	return token, nil
+
+	refreshToken, err := s.generateRefreshToken()
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	now := time.Now()
+	err = s.repo.CreateRefreshToken(ctx, RefreshToken{
+		Id:        ulid.Generate(),
+		UserId:    user.Id,
+		Token:     refreshToken,
+		ExpiresAt: now.Add(s.refreshTokenTTL),
+		CreatedAt: now,
+	})
+	if err != nil {
+		return LoginResponse{}, fmt.Errorf("failed to store refresh token: %w", err)
+	}
+
+	return LoginResponse{
+		AccessToken:  accessToken,
+		RefreshToken: refreshToken,
+	}, nil
+}
+
+func (s *AuthService) RefreshAccessToken(ctx context.Context, refreshToken string) (string, error) {
+	token, err := s.repo.GetRefreshToken(ctx, refreshToken)
+	if err != nil {
+		return "", ErrInvalidToken
+	}
+
+	if token.Revoked {
+		return "", ErrInvalidToken
+	}
+
+	if time.Now().After(token.ExpiresAt) {
+		return "", ErrExpiredToken
+	}
+
+	user, err := s.repo.GetUserByID(ctx, token.UserId)
+	if err != nil {
+		return "", err
+	}
+
+	accessToken, err := s.generateAccessToken(&user)
+	if err != nil {
+		return "", err
+	}
+
+	return accessToken, nil
 }
 
 func (s *AuthService) generateAccessToken(user *User) (string, error) {
@@ -108,4 +163,12 @@ func (s *AuthService) generateAccessToken(user *User) (string, error) {
 		return "", err
 	}
 	return tokenString, nil
+}
+
+func (s *AuthService) generateRefreshToken() (string, error) {
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return base64.RawURLEncoding.EncodeToString(buf), nil
 }

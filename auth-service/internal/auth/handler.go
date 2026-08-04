@@ -100,3 +100,8 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	response.Success(w, http.StatusOK, authToken)
 }
+
+func (h *AuthHandler) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
+	// TODO
+
+}
