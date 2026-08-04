@@ -3,10 +3,12 @@ package logger
 import (
 	"context"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"time"
 
+	"github.com/kelrob/shared/env"
 	"github.com/rs/zerolog"
 )
 
@@ -20,7 +22,12 @@ type Logger struct {
 }
 
 func NewLogger(service string) *Logger {
-	log := zerolog.New(os.Stdout).With().Timestamp().Logger()
+	var writer io.Writer = os.Stdout
+	if env.Get("APP_ENV", "development") == "development" {
+		writer = zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: time.RFC3339}
+	}
+
+	log := zerolog.New(writer).With().Timestamp().Logger()
 	return &Logger{log: log, service: service}
 }
 
