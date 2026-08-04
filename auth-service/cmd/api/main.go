@@ -1,0 +1,51 @@
+package main
+
+import (
+	"context"
+	"log"
+	"net/http"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/kelrob/auth-service/internal/auth"
+	"github.com/kelrob/auth-service/internal/config"
+	"github.com/kelrob/shared/logger"
+	"github.com/kelrob/shared/middleware"
+)
+
+var (
+	db     *pgxpool.Pool
+	appLog *logger.Logger
+	err    error
+)
+
+func main() {
+	appLog = logger.NewLogger("auth-service")
+	cfg := config.Load()
+
+	db, err = pgxpool.New(context.Background(), cfg.DatabaseURL)
+	if err != nil {
+		appLog.Fatal("Unable to connect to database", err)
+	}
+	defer db.Close()
+
+	err = db.Ping(context.Background())
+	if err != nil {
+		appLog.Fatal("Unable to ping database", err)
+	}
+
+	appLog.Log("Connected to database successfully", nil)
+
+	authRepo := auth.NewAuthRepository(db)
+	authService := auth.NewAuthService(authRepo, "SAMPLE1$", 15*time.Minute)
+	authHandler := auth.NewAuthHandler(authService)
+
+	limiter := middleware.NewRateLimiter(5, 2)
+
+	mux := http.NewServeMux()
+	auth.Register(mux, authHandler)
+	appLog.Log("Listening on port "+cfg.Port, nil)
+	appLog.Log("Auth service started", nil)
+
+	log.Fatal(http.ListenAndServe(":"+cfg.Port, appLog.Middleware(limiter.Middleware(mux))))
+}
