@@ -130,10 +130,11 @@ func main() {
 
 	go relay.Start(ctx)
 
-	limiter := middleware.NewRateLimiter(5, 2)
+	limiter := middleware.NewIPRateLimiter(5, 2)
+	authMiddleware := middleware.NewAuth("SAMPLE1$")
 
 	mux := http.NewServeMux()
-	order.Register(mux, orderHandler)
+	order.Register(mux, orderHandler, authMiddleware)
 
 	appLog.Log("Listening on port "+cfg.Port, nil)
 	appLog.Log("Order service started", nil)

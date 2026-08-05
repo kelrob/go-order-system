@@ -40,7 +40,7 @@ func main() {
 	authService := auth.NewAuthService(authRepo, "SAMPLE1$", 15*time.Minute, 7*24*time.Hour)
 	authHandler := auth.NewAuthHandler(authService)
 
-	limiter := middleware.NewRateLimiter(5, 2)
+	limiter := middleware.NewIPRateLimiter(5, 2)
 
 	mux := http.NewServeMux()
 	auth.Register(mux, authHandler)

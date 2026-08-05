@@ -3,6 +3,7 @@ package middleware
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -15,6 +16,7 @@ type contextKey string
 
 const (
 	UserIDKey contextKey = "userID"
+	RoleKey   contextKey = "role"
 )
 
 type Auth struct {
@@ -62,10 +64,32 @@ func (a *Auth) Middleware(next http.Handler) http.Handler {
 			response.Error(w, http.StatusUnauthorized, "invalid user ID in token", nil)
 			return
 		}
+
+		role, _ := claims["role"].(string)
+
 		ctx := context.WithValue(r.Context(), UserIDKey, userID.String())
+		ctx = context.WithValue(ctx, RoleKey, role)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+func (a *Auth) RequireRole(role string) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			currentRole, _ := r.Context().Value(RoleKey).(string)
+
+			fmt.Println("Current Role:", currentRole)
+			fmt.Println("Required Role:", role)
+
+			if currentRole != role {
+				response.Error(w, http.StatusForbidden, "forbidden", nil)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }
 
 func (a *Auth) validateJWToken(jwtToken string) (jwt.MapClaims, error) {

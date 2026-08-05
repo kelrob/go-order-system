@@ -2,35 +2,12 @@ module github.com/kelrob/auth-service
 
 go 1.26.5
 
-replace github.com/kelrob/shared/logger => ../shared/logger
-
-replace github.com/kelrob/shared/env => ../shared/env
-
-replace github.com/kelrob/shared/password => ../shared/password
-
-replace github.com/kelrob/shared/email => ../shared/email
-
-replace github.com/kelrob/shared/ulid => ../shared/ulid
-
-replace github.com/kelrob/shared/events => ../shared/events
-
-replace github.com/kelrob/shared/middleware => ../shared/middleware
-
-replace github.com/kelrob/shared/response => ../shared/response
-
-replace github.com/kelrob/shared/validation => ../shared/validation
+replace github.com/kelrob/shared => ../shared
 
 require (
 	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/jackc/pgx/v5 v5.10.0
-	github.com/kelrob/shared/env v0.0.0-00010101000000-000000000000
-	github.com/kelrob/shared/events v0.0.0-00010101000000-000000000000
-	github.com/kelrob/shared/logger v0.0.0-00010101000000-000000000000
-	github.com/kelrob/shared/middleware v0.0.0-00010101000000-000000000000
-	github.com/kelrob/shared/password v0.0.0-00010101000000-000000000000
-	github.com/kelrob/shared/response v0.0.0-00010101000000-000000000000
-	github.com/kelrob/shared/ulid v0.0.0-00010101000000-000000000000
-	github.com/kelrob/shared/validation v0.0.0-00010101000000-000000000000
+	github.com/kelrob/shared v0.0.0-00010101000000-000000000000
 )
 
 require (

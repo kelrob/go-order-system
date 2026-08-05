@@ -1,10 +1,17 @@
 package order
 
-import "net/http"
+import (
+	"net/http"
 
-func Register(mux *http.ServeMux, handler *Handler) {
+	"github.com/kelrob/shared/middleware"
+)
+
+func Register(mux *http.ServeMux, handler *Handler, auth *middleware.Auth) {
+	// Public routes
+	mux.HandleFunc("GET /health", http.HandlerFunc(handler.HealthCheck))
+
+	// Protected routes
 	mux.HandleFunc("POST /orders", handler.CreateOrder)
 	mux.HandleFunc("GET /orders", handler.GetOrders)
 	mux.HandleFunc("GET /orders/{id}", handler.GetOrder)
-	mux.HandleFunc("GET /health", handler.HealthCheck)
 }
