@@ -120,31 +120,31 @@ func (s *AuthService) Login(ctx context.Context, input LoginInput) (LoginRespons
 	}, nil
 }
 
-func (s *AuthService) RefreshAccessToken(ctx context.Context, refreshToken string) (string, error) {
+func (s *AuthService) RefreshAccessToken(ctx context.Context, refreshToken string) (RefreshTokenResponse, error) {
 	token, err := s.repo.GetRefreshToken(ctx, refreshToken)
 	if err != nil {
-		return "", ErrInvalidToken
+		return RefreshTokenResponse{}, ErrInvalidToken
 	}
 
 	if token.Revoked {
-		return "", ErrInvalidToken
+		return RefreshTokenResponse{}, ErrInvalidToken
 	}
 
 	if time.Now().After(token.ExpiresAt) {
-		return "", ErrExpiredToken
+		return RefreshTokenResponse{}, ErrExpiredToken
 	}
 
 	user, err := s.repo.GetUserByID(ctx, token.UserId)
 	if err != nil {
-		return "", err
+		return RefreshTokenResponse{}, err
 	}
 
 	accessToken, err := s.generateAccessToken(&user)
 	if err != nil {
-		return "", err
+		return RefreshTokenResponse{}, err
 	}
 
-	return accessToken, nil
+	return RefreshTokenResponse{AccessToken: accessToken}, nil
 }
 
 func (s *AuthService) generateAccessToken(user *User) (string, error) {

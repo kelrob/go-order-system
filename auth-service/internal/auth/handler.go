@@ -30,7 +30,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		response.Error(w, http.StatusBadRequest, err.Error(), nil)
+		response.Error(w, http.StatusBadRequest, "invalid request payload", nil)
 		return
 	}
 
@@ -69,7 +69,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		response.Error(w, http.StatusBadRequest, err.Error(), nil)
+		response.Error(w, http.StatusBadRequest, "invalid request payload", nil)
 		return
 	}
 
@@ -102,6 +102,30 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *AuthHandler) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
-	// TODO
+	var req RefreshTokenRequest
 
+	err := json.NewDecoder(r.Body).Decode(&req)
+	if err != nil {
+		response.Error(w, http.StatusBadRequest, "Invalid request payload", nil)
+		return
+	}
+
+	if err := validation.ValidateRequest(req); err != nil {
+		valErrs := err.(*validation.ValidationErrorCollection)
+		response.Error(w, http.StatusBadRequest, "validation failed", valErrs.Errors)
+		return
+	}
+
+	authToken, err := h.service.RefreshAccessToken(r.Context(), req.RefreshToken)
+	if err != nil {
+		if errors.Is(err, ErrInvalidToken) || errors.Is(err, ErrExpiredToken) {
+			response.Error(w, http.StatusUnauthorized, err.Error(), nil)
+			return
+		}
+		response.Error(w, http.StatusInternalServerError, "something went wrong, please try again", nil)
+		// TODO: Log err
+		return
+	}
+
+	response.Success(w, http.StatusOK, authToken)
 }
