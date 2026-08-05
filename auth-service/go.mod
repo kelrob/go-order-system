@@ -21,6 +21,7 @@ replace github.com/kelrob/shared/response => ../shared/response
 replace github.com/kelrob/shared/validation => ../shared/validation
 
 require (
+	github.com/golang-jwt/jwt v3.2.2+incompatible
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/kelrob/shared/env v0.0.0-00010101000000-000000000000
 	github.com/kelrob/shared/events v0.0.0-00010101000000-000000000000
@@ -37,7 +38,6 @@ require (
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.30.3 // indirect
-	github.com/golang-jwt/jwt v3.2.2+incompatible // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
 	github.com/jackc/pgservicefile v0.0.0-20240606120523-5a60cdf6a761 // indirect
 	github.com/jackc/puddle/v2 v2.2.2 // indirect
