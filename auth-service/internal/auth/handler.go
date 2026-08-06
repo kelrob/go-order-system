@@ -6,16 +6,18 @@ import (
 	"net/http"
 
 	"github.com/kelrob/shared/logger"
+	"github.com/kelrob/shared/middleware"
 	"github.com/kelrob/shared/response"
 	"github.com/kelrob/shared/validation"
 )
 
 type AuthHandler struct {
 	service *AuthService
+	appLog  *logger.Logger
 }
 
-func NewAuthHandler(service *AuthService) *AuthHandler {
-	return &AuthHandler{service: service}
+func NewAuthHandler(service *AuthService, appLog *logger.Logger) *AuthHandler {
+	return &AuthHandler{service: service, appLog: appLog}
 }
 
 func (h *AuthHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
@@ -128,4 +130,20 @@ func (h *AuthHandler) RefreshAccessToken(w http.ResponseWriter, r *http.Request)
 	}
 
 	response.Success(w, http.StatusOK, authToken)
+}
+
+func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+	user, ok := middleware.GetUser(r)
+	if !ok {
+		response.Error(w, http.StatusUnauthorized, "unauthorized", nil)
+		return
+	}
+
+	err := h.service.Logout(r.Context(), user.UserID)
+	if err != nil {
+		response.Error(w, http.StatusInternalServerError, "something went wrong, please try again", nil)
+		return
+	}
+
+	response.Success(w, http.StatusOK, "Logged out successfully")
 }

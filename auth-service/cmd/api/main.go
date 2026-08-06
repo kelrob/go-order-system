@@ -9,6 +9,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kelrob/auth-service/internal/auth"
 	"github.com/kelrob/auth-service/internal/config"
+	"github.com/kelrob/shared/env"
 	"github.com/kelrob/shared/logger"
 	"github.com/kelrob/shared/middleware"
 )
@@ -36,14 +37,17 @@ func main() {
 
 	appLog.Log("Connected to database successfully", nil)
 
+	jwtSecret := env.Get("JWT_SECRET", "SAMPLE1$")
+
 	authRepo := auth.NewAuthRepository(db)
-	authService := auth.NewAuthService(authRepo, "SAMPLE1$", 15*time.Minute, 7*24*time.Hour)
-	authHandler := auth.NewAuthHandler(authService)
+	authService := auth.NewAuthService(authRepo, jwtSecret, 15*time.Minute, 7*24*time.Hour)
+	authHandler := auth.NewAuthHandler(authService, appLog)
 
 	limiter := middleware.NewIPRateLimiter(5, 2)
+	authMiddleware := middleware.NewAuth(jwtSecret)
 
 	mux := http.NewServeMux()
-	auth.Register(mux, authHandler)
+	auth.RegisterRoutes(mux, authHandler, authMiddleware)
 	appLog.Log("Listening on port "+cfg.Port, nil)
 	appLog.Log("Auth service started", nil)
 

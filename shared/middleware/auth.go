@@ -113,3 +113,15 @@ func (a *Auth) validateJWToken(jwtToken string) (jwt.MapClaims, error) {
 	return nil, ErrInvalidToken
 
 }
+
+func GetUser(r *http.Request) (struct {
+	UserID string
+	Role   string
+}, bool) {
+	userID, okUser := r.Context().Value(UserIDKey).(string)
+	role, okRole := r.Context().Value(RoleKey).(string)
+	return struct {
+		UserID string
+		Role   string
+	}{UserID: userID, Role: role}, okUser && okRole
+}

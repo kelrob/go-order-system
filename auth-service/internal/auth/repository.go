@@ -129,6 +129,43 @@ func (a *AuthRepository) CreateRefreshToken(ctx context.Context, token RefreshTo
 	return nil
 }
 
+func (a *AuthRepository) RotateRefreshToken(ctx context.Context, oldToken string, newToken RefreshToken) error {
+	tx, err := a.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to begin transaction: %w", err)
+	}
+
+	_, err = tx.Exec(ctx,
+		`UPDATE refresh_tokens SET revoked = true WHERE token = $1`,
+		oldToken,
+	)
+	if err != nil {
+		tx.Rollback(ctx)
+		return fmt.Errorf("failed to revoke old refresh token: %w", err)
+	}
+
+	_, err = tx.Exec(ctx,
+		`INSERT INTO refresh_tokens (id, user_id, token, expires_at, created_at, revoked)
+		VALUES ($1, $2, $3, $4, $5, $6)`,
+		newToken.Id,
+		newToken.UserId,
+		newToken.Token,
+		newToken.ExpiresAt,
+		newToken.CreatedAt,
+		newToken.Revoked,
+	)
+	if err != nil {
+		tx.Rollback(ctx)
+		return fmt.Errorf("failed to insert new refresh token: %w", err)
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("failed to commit transaction: %w", err)
+	}
+
+	return nil
+}
+
 func (a *AuthRepository) GetRefreshToken(ctx context.Context, refreshToken string) (RefreshToken, error) {
 	var token RefreshToken
 
@@ -175,4 +212,12 @@ func (a *AuthRepository) GetUserByID(ctx context.Context, id string) (User, erro
 	}
 
 	return user, nil
+}
+
+func (a *AuthRepository) UpdateRefreshTokenToExpired(ctx context.Context, userID string) error {
+	_, err := a.db.Query(ctx, `UPDATE refresh_tokens
+        SET revoked = true
+        WHERE user_id = $1`, userID)
+
+	return err
 }

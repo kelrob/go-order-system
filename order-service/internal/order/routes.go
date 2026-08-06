@@ -6,7 +6,7 @@ import (
 	"github.com/kelrob/shared/middleware"
 )
 
-func Register(mux *http.ServeMux, handler *Handler, auth *middleware.Auth) {
+func RegisterRoutes(mux *http.ServeMux, handler *Handler, auth *middleware.Auth) {
 	// Public routes
 	mux.HandleFunc("GET /health", http.HandlerFunc(handler.HealthCheck))
 

@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/golang-jwt/jwt"
@@ -19,6 +20,8 @@ type UserRepository interface {
 	GetUserByID(ctx context.Context, id string) (User, error)
 	CreateRefreshToken(ctx context.Context, token RefreshToken) error
 	GetRefreshToken(ctx context.Context, token string) (RefreshToken, error)
+	RotateRefreshToken(ctx context.Context, oldToken string, newToken RefreshToken) error
+	UpdateRefreshTokenToExpired(ctx context.Context, userID string) error
 }
 
 type AuthService struct {
@@ -63,7 +66,7 @@ func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (Us
 		Id:             ulid.Generate(),
 		FirstName:      input.FirstName,
 		LastName:       input.LastName,
-		Email:          input.Email,
+		Email:          normalizeEmail(input.Email),
 		HashedPassword: hashedPassword,
 		TraceId:        input.TraceId,
 		Role:           UserRole,
@@ -83,7 +86,7 @@ func (s *AuthService) CreateUser(ctx context.Context, input CreateUserInput) (Us
 }
 
 func (s *AuthService) Login(ctx context.Context, input LoginInput) (LoginResponse, error) {
-	user, err := s.repo.GetUserByEmail(ctx, input.Email)
+	user, err := s.repo.GetUserByEmail(ctx, normalizeEmail(input.Email))
 	if err != nil {
 		return LoginResponse{}, ErrInvalidCredentials
 	}
@@ -144,7 +147,28 @@ func (s *AuthService) RefreshAccessToken(ctx context.Context, refreshToken strin
 		return RefreshTokenResponse{}, err
 	}
 
-	return RefreshTokenResponse{AccessToken: accessToken}, nil
+	newRefreshToken, err := s.generateRefreshToken()
+	if err != nil {
+		return RefreshTokenResponse{}, fmt.Errorf("failed to generate refresh token: %w", err)
+	}
+
+	now := time.Now()
+	err = s.repo.RotateRefreshToken(ctx, refreshToken, RefreshToken{
+		Id:        ulid.Generate(),
+		UserId:    user.Id,
+		Token:     newRefreshToken,
+		ExpiresAt: now.Add(s.refreshTokenTTL),
+		CreatedAt: now,
+	})
+	if err != nil {
+		return RefreshTokenResponse{}, fmt.Errorf("failed to rotate refresh token: %w", err)
+	}
+
+	return RefreshTokenResponse{AccessToken: accessToken, RefreshToken: newRefreshToken}, nil
+}
+
+func (s *AuthService) Logout(ctx context.Context, userID string) error {
+	return s.repo.UpdateRefreshTokenToExpired(ctx, userID)
 }
 
 func (s *AuthService) generateAccessToken(user *User) (string, error) {
@@ -163,6 +187,10 @@ func (s *AuthService) generateAccessToken(user *User) (string, error) {
 		return "", err
 	}
 	return tokenString, nil
+}
+
+func normalizeEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
 }
 
 func (s *AuthService) generateRefreshToken() (string, error) {

@@ -14,6 +14,7 @@ import (
 	"github.com/kelrob/order-service/internal/config"
 	"github.com/kelrob/order-service/internal/kafka"
 	"github.com/kelrob/order-service/internal/order"
+	"github.com/kelrob/shared/env"
 	"github.com/kelrob/shared/events"
 	"github.com/kelrob/shared/logger"
 	"github.com/kelrob/shared/middleware"
@@ -131,10 +132,10 @@ func main() {
 	go relay.Start(ctx)
 
 	limiter := middleware.NewIPRateLimiter(5, 2)
-	authMiddleware := middleware.NewAuth("SAMPLE1$")
+	authMiddleware := middleware.NewAuth(env.Get("JWT_SECRET", "SAMPLE1$"))
 
 	mux := http.NewServeMux()
-	order.Register(mux, orderHandler, authMiddleware)
+	order.RegisterRoutes(mux, orderHandler, authMiddleware)
 
 	appLog.Log("Listening on port "+cfg.Port, nil)
 	appLog.Log("Order service started", nil)
