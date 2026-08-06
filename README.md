@@ -1,7 +1,7 @@
 # Order System
 
 ## Summary
-This project is a Go-based distributed order management system responsible for the full lifecycle of creating and processing an order. It is built using an event-driven architecture across four independent microservices that communicate exclusively through Kafka.
+This project is a Go-based distributed order management system responsible for the full lifecycle of creating and processing an order. It is built using an event-driven architecture across five independent microservices. Order, inventory, payment, and notification communicate exclusively through Kafka; auth-service issues the JWTs the others verify on incoming requests.
 
 ## Prerequisites
 - Go 1.21+
@@ -10,42 +10,54 @@ This project is a Go-based distributed order management system responsible for t
 
 ## Getting Started
 1. Clone the repository
-2. Start infrastructure (PostgreSQL instances + Kafka):
+2. Start infrastructure (PostgreSQL instances + Kafka) from the repo root:
 ```bash
-   cd order-service
    docker compose up -d
 ```
 3. Run database migrations for each service:
 ```bash
-   docker exec -i go_order_postgres psql -U postgres -d orderdb < order-service/storage/migrations.sql
-   docker exec -i go_inventory_postgres psql -U postgres -d inventorydb < inventory-service/storage/migrations.sql
-   docker exec -i go_payment_postgres psql -U postgres -d paymentdb < payment-service/storage/migrations.sql
+   docker exec -i go_order_postgres psql -U postgres -d orderdb < order-service/migrations/001_init.sql
+   docker exec -i go_inventory_postgres psql -U postgres -d inventorydb < inventory-service/migrations/001_init.sql
+   docker exec -i go_payment_postgres psql -U postgres -d paymentdb < payment-service/migrations/001_init.sql
+   docker exec -i go_auth_postgres psql -U postgres -d authdb < auth-service/migrations/001_init.sql
 ```
-4. Install dependencies in each service:
+4. Install dependencies. `shared/` is a single Go module vendored into every service via a `replace` directive, so tidy it first:
 ```bash
-   cd order-service && go mod tidy
+   cd shared && go mod tidy
+   cd ../order-service && go mod tidy
    cd ../inventory-service && go mod tidy
    cd ../payment-service && go mod tidy
    cd ../notification-service && go mod tidy
-   cd ../shared/logger && go mod tidy
-   cd ../events && go mod tidy
+   cd ../auth-service && go mod tidy
 ```
-5. Start each service in a separate terminal using `air`
+5. Set a real `JWT_SECRET` env var for auth-service and any service that verifies tokens (order-service today). Both fall back to an insecure hardcoded default if it's unset — fine for local dev, not for anything else.
+6. Start each service in a separate terminal using `air`
 
 ## Services Overview
 
 | Service | Port | Responsibility |
 |---------|------|----------------|
+| auth-service | 8085 | User signup/login, JWT issuance and refresh, role-based access control |
 | order-service | 8080 | Accepts incoming orders, manages order lifecycle |
 | inventory-service | 8081 | Manages stock, reserves and unreserves inventory |
 | payment-service | 8082 | Processes payments |
 | notification-service | 8083 | Sends confirmation notifications to users |
 
-Each service is an independent Go module with its own database, Kafka consumer, outbox relay, and HTTP server.
+Each service is an independent Go application with its own database, HTTP server, and (aside from auth-service) a Kafka consumer and outbox relay. They share one internal library (`shared/`) for cross-cutting concerns — logging, middleware, JWT/ULID/password helpers, validation, and Kafka event names.
+
+## Authentication
+auth-service issues short-lived JWT access tokens (15 min) plus long-lived refresh tokens (7 days), stored server-side so they can be revoked.
+
+- `POST /auth/signup` — creates a user, hashes the password with bcrypt
+- `POST /auth/login` — verifies credentials, returns an access token + refresh token
+- `POST /auth/refresh` — validates the refresh token and **rotates** it: the old one is revoked and a new access/refresh pair is issued in the same transaction, so a stolen refresh token is only usable once
+- `POST /auth/logout` — revokes all refresh tokens for the authenticated user
+
+Other services verify the access token via `shared/middleware.Auth`, which decodes the JWT and attaches user ID and role to the request context; `Auth.RequireRole` gates handlers to a specific role. Both auth-service and order-service also apply a per-IP token bucket rate limiter (`shared/middleware.IPRateLimiter`) in front of their HTTP servers.
 
 ## Event Flow
 
-Two possible paths through the system:
+Two possible paths through the order lifecycle:
 
 **Happy path (payment succeeds):**
 POST /orders
@@ -62,6 +74,8 @@ POST /orders
 - inventory.unreserved
 - order marked as failed
 
+auth-service publishes `user.registered` via its own outbox on signup, independent of the order flow above.
+
 ### Event Details
 
 | Event | Publisher | Subscriber(s) |
@@ -71,6 +85,7 @@ POST /orders
 | payment.succeeded | payment-service | notification-service, order-service |
 | payment.failed | payment-service | inventory-service |
 | inventory.unreserved | inventory-service | order-service |
+| user.registered | auth-service | none yet |
 
 ## Database Setup
 Each service owns its own PostgreSQL database. No service accesses another service's database directly.
@@ -80,6 +95,7 @@ Each service owns its own PostgreSQL database. No service accesses another servi
 | order-service | orderdb | 5432 |
 | inventory-service | inventorydb | 5433 |
 | payment-service | paymentdb | 5434 |
+| auth-service | authdb | 5435 |
 
 Every database contains at minimum:
 - **outbox** — stores events to be published, ensures atomic writes with business data
@@ -90,7 +106,8 @@ Every database contains at minimum:
 - **Idempotency** — every consumer checks processed_events before handling an event, preventing duplicate processing
 - **Dead Letter Queue** — failed events are routed to a DLQ topic after 3 retry attempts, unblocking the consumer
 - **Circuit Breaker** — payment service wraps processing with a circuit breaker, failing fast after 3 consecutive failures and recovering automatically after a cooldown period
-- **Rate Limiting** — order service enforces a token bucket rate limiter (5 requests burst, 2/second sustained)
+- **Rate Limiting** — auth-service and order-service enforce a per-client-IP token bucket rate limiter (5 requests burst, 2/second sustained)
+- **Refresh Token Rotation** — auth-service revokes each refresh token the moment it's used and issues a new one, limiting how long a leaked refresh token stays useful
 
 ## Logging
 All services use a shared structured logger (`shared/logger`) built on zerolog. Every log line is JSON with consistent fields:
@@ -106,7 +123,7 @@ All services use a shared structured logger (`shared/logger`) built on zerolog. 
 }
 ```
 
-A trace ID is generated at the HTTP entry point and propagated through every Kafka event, enabling full request tracing across all four services.
+A trace ID is generated at the HTTP entry point and propagated through every Kafka event, enabling full request tracing across all services.
 
 HTTP requests are automatically logged via middleware with method, path, status code, and duration.
 
@@ -115,6 +132,7 @@ HTTP requests are automatically logged via middleware with method, path, status 
 - **Consumer topic injection** — pass `record.Topic` into `ConsumerHandler` so handlers don't reference event names directly
 - **Circuit breaker on relay** — wrap Kafka publish in the relay with a circuit breaker across all services
 - **DLQ replay tool** — admin tool or automated process to replay DLQ messages after service recovery
-- **Environment variables** — database URLs, Kafka brokers, ports, and log levels are currently hardcoded
-- **Docker Compose at root level** — currently lives inside order-service, should be at system root
+- **Secrets management** — `JWT_SECRET` currently falls back to a hardcoded default if the env var is unset; should fail closed instead of silently using an insecure default
+- **Refresh token reuse detection** — replaying an already-rotated refresh token is rejected but treated like any other invalid token; detecting reuse and revoking the whole session would flag likely token theft
+- **`user.registered` has no subscriber yet** — published by auth-service's outbox but nothing consumes it (e.g. a future welcome-email flow in notification-service)
 - **Log level configuration** — should be configurable via environment variable per deployment environment
