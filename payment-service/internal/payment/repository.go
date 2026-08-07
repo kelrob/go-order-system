@@ -11,6 +11,7 @@ import (
 	"github.com/kelrob/payment-service/internal/circuit"
 	"github.com/kelrob/shared/events"
 	"github.com/kelrob/shared/logger"
+	"github.com/kelrob/shared/ulid"
 )
 
 type Repository struct {
@@ -39,6 +40,7 @@ func (s *Repository) ProcessPayment(ctx context.Context, event InventoryReserved
 
 		if paymentSucceeded {
 			outboxPayload, err = json.Marshal(PaymentSucceededEvent{
+				EventId:   ulid.Generate(),
 				TraceId:   event.TraceId,
 				OrderId:   event.OrderId,
 				UserId:    event.UserId,

@@ -10,7 +10,7 @@ type Config struct {
 
 func Load() *Config {
 	return &Config{
-		DatabaseURL: env.Get("DATABASE_URL", "postgres://postgres:postgres@localhost:5432/orderdb"),
+		DatabaseURL: env.Get("DATABASE_URL", "postgres://postgres:postgres@localhost:5436/notificationdb"),
 		KafkaBroker: env.Get("KAFKA_BROKER", "localhost:9092"),
 		Port:        env.Get("PORT", "8083"),
 	}

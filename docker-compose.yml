@@ -47,6 +47,18 @@ services:
     volumes:
       - auth_postgres_data:/var/lib/postgresql/data
 
+  notification_postgres:
+    image: postgres:16
+    container_name: go_notification_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: notificationdb
+    ports:
+      - "5436:5432"
+    volumes:
+      - notification_postgres_data:/var/lib/postgresql/data
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: order_zookeeper
@@ -73,3 +85,4 @@ volumes:
   inventory_postgres_data:
   payment_postgres_data:
   auth_postgres_data:
+  notification_postgres_data:

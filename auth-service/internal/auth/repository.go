@@ -6,11 +6,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/kelrob/shared/events"
+	"github.com/kelrob/shared/ulid"
 )
 
 const pgUniqueViolation = "23505"
@@ -25,6 +25,7 @@ func NewAuthRepository(db *pgxpool.Pool) *AuthRepository {
 
 func (a *AuthRepository) CreateUser(ctx context.Context, user User) error {
 	tx, err := a.db.Begin(ctx)
+	eventId := ulid.Generate()
 	if err != nil {
 		return fmt.Errorf("failed to begin transactions: %w", err)
 	}
@@ -54,7 +55,9 @@ func (a *AuthRepository) CreateUser(ctx context.Context, user User) error {
 	}
 
 	payload, err := json.Marshal(UserRegisteredEvent{
+		EventId:   eventId,
 		TraceId:   user.TraceId,
+		UserId:    user.Id,
 		Email:     user.Email,
 		FirstName: user.FirstName,
 		LastName:  user.LastName,
@@ -68,7 +71,7 @@ func (a *AuthRepository) CreateUser(ctx context.Context, user User) error {
 	_, err = tx.Exec(ctx,
 		`INSERT INTO outbox (id, event_type, payload)
 		VALUES ($1, $2, $3)`,
-		fmt.Sprintf("%d", time.Now().UnixNano()),
+		eventId,
 		events.UserRegistered,
 		payload,
 	)

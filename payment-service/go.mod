@@ -17,6 +17,7 @@ require (
 	github.com/klauspost/compress v1.18.6 // indirect
 	github.com/mattn/go-colorable v0.1.14 // indirect
 	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/oklog/ulid/v2 v2.1.2 // indirect
 	github.com/pierrec/lz4/v4 v4.1.26 // indirect
 	github.com/rs/zerolog v1.35.1 // indirect
 	github.com/twmb/franz-go/pkg/kmsg v1.13.1 // indirect

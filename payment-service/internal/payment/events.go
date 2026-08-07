@@ -28,6 +28,7 @@ type PaymentFailedEvent struct {
 }
 
 type PaymentSucceededEvent struct {
+	EventId   string    `json:"event_id"`
 	TraceId   string    `json:"trace_id"`
 	OrderId   string    `json:"order_id"`
 	UserId    string    `json:"user_id"`

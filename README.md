@@ -20,6 +20,7 @@ This project is a Go-based distributed order management system responsible for t
    docker exec -i go_inventory_postgres psql -U postgres -d inventorydb < inventory-service/migrations/001_init.sql
    docker exec -i go_payment_postgres psql -U postgres -d paymentdb < payment-service/migrations/001_init.sql
    docker exec -i go_auth_postgres psql -U postgres -d authdb < auth-service/migrations/001_init.sql
+   docker exec -i go_notification_postgres psql -U postgres -d notificationdb < notification-service/migrations/001_init.sql
 ```
 4. Install dependencies. `shared/` is a single Go module vendored into every service via a `replace` directive, so tidy it first:
 ```bash
@@ -85,7 +86,7 @@ auth-service publishes `user.registered` via its own outbox on signup, independe
 | payment.succeeded | payment-service | notification-service, order-service |
 | payment.failed | payment-service | inventory-service |
 | inventory.unreserved | inventory-service | order-service |
-| user.registered | auth-service | none yet |
+| user.registered | auth-service | notification-service |
 
 ## Database Setup
 Each service owns its own PostgreSQL database. No service accesses another service's database directly.
@@ -96,9 +97,10 @@ Each service owns its own PostgreSQL database. No service accesses another servi
 | inventory-service | inventorydb | 5433 |
 | payment-service | paymentdb | 5434 |
 | auth-service | authdb | 5435 |
+| notification-service | notificationdb | 5436 |
 
 Every database contains at minimum:
-- **outbox** — stores events to be published, ensures atomic writes with business data
+- **outbox** — stores events to be published, ensures atomic writes with business data (notification-service is the exception: it only consumes, so it has no outbox)
 - **processed_events** — tracks consumed events, ensures idempotent processing
 
 ## Reliability Patterns
@@ -134,5 +136,5 @@ HTTP requests are automatically logged via middleware with method, path, status 
 - **DLQ replay tool** — admin tool or automated process to replay DLQ messages after service recovery
 - **Secrets management** — `JWT_SECRET` currently falls back to a hardcoded default if the env var is unset; should fail closed instead of silently using an insecure default
 - **Refresh token reuse detection** — replaying an already-rotated refresh token is rejected but treated like any other invalid token; detecting reuse and revoking the whole session would flag likely token theft
-- **`user.registered` has no subscriber yet** — published by auth-service's outbox but nothing consumes it (e.g. a future welcome-email flow in notification-service)
 - **Log level configuration** — should be configurable via environment variable per deployment environment
+- **`payment.succeeded` carries no email** — notification-service's welcome/receipt email for that event falls back to `user_id` as the recipient since the event has no address on it; either the event should carry one or notification-service needs another way to resolve it
