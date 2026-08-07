@@ -92,8 +92,10 @@ func main() {
 
 	appLog.Log("Payment service started", nil)
 
+	paymentHandler := payment.NewHandler(appLog)
+
 	mux := http.NewServeMux()
-	payment.Register(mux)
+	payment.RegisterRoutes(mux, paymentHandler)
 
 	go func() {
 		appLog.Log("Listening on port "+cfg.Port, nil)

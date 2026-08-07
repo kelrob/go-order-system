@@ -41,7 +41,7 @@ func main() {
 
 	authRepo := auth.NewAuthRepository(db)
 	authService := auth.NewAuthService(authRepo, jwtSecret, 15*time.Minute, 7*24*time.Hour)
-	authHandler := auth.NewAuthHandler(authService, appLog)
+	authHandler := auth.NewHandler(authService, appLog)
 
 	limiter := middleware.NewIPRateLimiter(5, 2)
 	authMiddleware := middleware.NewAuth(jwtSecret)

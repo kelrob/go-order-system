@@ -11,7 +11,15 @@ func RegisterRoutes(mux *http.ServeMux, handler *Handler, auth *middleware.Auth)
 	mux.HandleFunc("GET /health", http.HandlerFunc(handler.HealthCheck))
 
 	// Protected routes
-	mux.HandleFunc("POST /orders", handler.CreateOrder)
-	mux.HandleFunc("GET /orders", handler.GetOrders)
-	mux.HandleFunc("GET /orders/{id}", handler.GetOrder)
+	mux.Handle("POST /orders",
+		auth.Middleware(http.HandlerFunc(handler.CreateOrder)),
+	)
+
+	mux.Handle("GET /orders",
+		auth.Middleware(http.HandlerFunc(handler.GetOrders)),
+	)
+
+	mux.Handle("GET /orders/{id}",
+		auth.Middleware(http.HandlerFunc(handler.GetOrder)),
+	)
 }

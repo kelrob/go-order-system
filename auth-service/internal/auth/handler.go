@@ -11,23 +11,23 @@ import (
 	"github.com/kelrob/shared/validation"
 )
 
-type AuthHandler struct {
+type Handler struct {
 	service *AuthService
 	appLog  *logger.Logger
 }
 
-func NewAuthHandler(service *AuthService, appLog *logger.Logger) *AuthHandler {
-	return &AuthHandler{service: service, appLog: appLog}
+func NewHandler(service *AuthService, appLog *logger.Logger) *Handler {
+	return &Handler{service: service, appLog: appLog}
 }
 
-func (h *AuthHandler) HealthCheck(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) HealthCheck(w http.ResponseWriter, r *http.Request) {
 	response.Success(w, http.StatusOK, map[string]string{
 		"status":  "ok",
 		"service": "auth-service",
 	})
 }
 
-func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Signup(w http.ResponseWriter, r *http.Request) {
 	var req SignupRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -66,7 +66,7 @@ func (h *AuthHandler) Signup(w http.ResponseWriter, r *http.Request) {
 	response.Success(w, http.StatusCreated, user)
 }
 
-func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req LoginRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -103,7 +103,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	response.Success(w, http.StatusOK, authToken)
 }
 
-func (h *AuthHandler) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) RefreshAccessToken(w http.ResponseWriter, r *http.Request) {
 	var req RefreshTokenRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
@@ -132,7 +132,7 @@ func (h *AuthHandler) RefreshAccessToken(w http.ResponseWriter, r *http.Request)
 	response.Success(w, http.StatusOK, authToken)
 }
 
-func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) Logout(w http.ResponseWriter, r *http.Request) {
 	user, ok := middleware.GetUser(r)
 	if !ok {
 		response.Error(w, http.StatusUnauthorized, "unauthorized", nil)

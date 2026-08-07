@@ -136,8 +136,10 @@ func main() {
 
 	appLog.Log("Inventory service started", nil)
 
+	inventoryHandler := inventory.NewHandler(appLog)
+
 	mux := http.NewServeMux()
-	inventory.Register(mux)
+	inventory.RegisterRoutes(mux, inventoryHandler)
 
 	go func() {
 		appLog.Log("Listening on port "+cfg.Port, nil)

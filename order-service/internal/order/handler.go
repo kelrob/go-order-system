@@ -6,6 +6,7 @@ import (
 
 	"github.com/kelrob/shared/logger"
 	"github.com/kelrob/shared/response"
+	"github.com/kelrob/shared/validation"
 )
 
 type Handler struct {
@@ -16,23 +17,18 @@ func NewHandler(service *Service) *Handler {
 	return &Handler{service: service}
 }
 
-type CreateOrderRequest struct {
-	UserId string             `json:"user_id"`
-	Items  []OrderItemRequest `json:"items"`
-}
-
-type OrderItemRequest struct {
-	ProductId string  `json:"product_id"`
-	Quantity  int     `json:"quantity"`
-	Price     float64 `json:"price"`
-}
-
 func (h *Handler) CreateOrder(w http.ResponseWriter, r *http.Request) {
 	var req CreateOrderRequest
 
 	err := json.NewDecoder(r.Body).Decode(&req)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		response.Error(w, http.StatusBadRequest, "invalid request payload", nil)
+		return
+	}
+
+	if err := validation.ValidateRequest(req); err != nil {
+		valErrs := err.(*validation.ValidationErrorCollection)
+		response.Error(w, http.StatusBadRequest, "validation failed", valErrs.Errors)
 		return
 	}
 

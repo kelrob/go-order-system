@@ -112,7 +112,10 @@ func main() {
 	defer cancel()
 
 	mux := http.NewServeMux()
-	notification.Register(mux)
+
+	notificationHandler := notification.NewHandler(appLog)
+
+	notification.RegisterRoutes(mux, notificationHandler)
 
 	go func() {
 		appLog.Log("Listening on port "+cfg.Port, nil)
